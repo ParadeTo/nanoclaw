@@ -88,13 +88,28 @@ export function ensureContainerRuntimeRunning(): void {
       '║  Agents cannot run without a container runtime. To fix:        ║',
     );
     console.error(
+      '║                                                                ║',
+    );
+    console.error(
+      '║  Option A: Docker                                              ║',
+    );
+    console.error(
       '║  1. Ensure Docker is installed and running                     ║',
     );
     console.error(
       '║  2. Run: docker info                                           ║',
     );
     console.error(
-      '║  3. Restart NanoClaw                                           ║',
+      '║                                                                ║',
+    );
+    console.error(
+      '║  Option B: Podman — run /convert-to-podman in Claude Code      ║',
+    );
+    console.error(
+      '║                                                                ║',
+    );
+    console.error(
+      '║  Then restart NanoClaw                                         ║',
     );
     console.error(
       '╚════════════════════════════════════════════════════════════════╝\n',
