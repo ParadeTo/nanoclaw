@@ -83,20 +83,39 @@ Run `npx tsx setup/index.ts --step timezone` and parse the status block.
 
 Check the preflight results for `APPLE_CONTAINER` and `DOCKER`, and the PLATFORM from step 1.
 
-- PLATFORM=linux → Docker (only option)
-- PLATFORM=macos + APPLE_CONTAINER=installed → AskUserQuestion with two options:
+- PLATFORM=linux → AskUserQuestion with two options:
+  1. **Docker (recommended)** — description: "Standard container runtime. Install Docker Engine."
+  2. **Podman** — description: "Daemonless, rootless-friendly alternative. Uses podman-docker for docker compatibility."
+  If Podman, run `/convert-to-podman` now, then continue to 3b.
+- PLATFORM=macos + APPLE_CONTAINER=installed → AskUserQuestion with three options:
   1. **Docker (recommended)** — description: "Cross-platform, better credential management, well-tested."
-  2. **Apple Container (experimental)** — description: "Native macOS runtime. Requires advanced setup."
+  2. **Podman** — description: "Docker-compatible, daemonless. Uses podman-mac-helper."
+  3. **Apple Container (experimental)** — description: "Native macOS runtime. Requires advanced setup."
   If Apple Container, run `/convert-to-apple-container` now, then skip to 3c.
-- PLATFORM=macos + APPLE_CONTAINER=not_found → Docker
+  If Podman, run `/convert-to-podman` now, then continue to 3b.
+- PLATFORM=macos + APPLE_CONTAINER=not_found → AskUserQuestion with two options:
+  1. **Docker (recommended)** — description: "Cross-platform, better credential management, well-tested."
+  2. **Podman** — description: "Docker-compatible, daemonless. Uses podman-mac-helper."
+  If Podman, run `/convert-to-podman` now, then continue to 3b.
 
-### 3a-docker. Install Docker
+### 3a-docker. Install Docker (or Podman)
 
-- DOCKER=running → continue to 4b
-- DOCKER=installed_not_running → start Docker: `open -a Docker` (macOS) or `sudo systemctl start docker` (Linux). Wait 15s, re-check with `docker info`.
-- DOCKER=not_found → Use `AskUserQuestion: Docker is required for running agents. Would you like me to install it?` If confirmed:
+- DOCKER=running → continue to 3b
+- DOCKER=installed_not_running:
+  - If PODMAN_DOCKER=true → the `docker` command is actually podman-docker. Start the Podman socket instead of Docker Desktop:
+    - Rootless (preferred): `systemctl --user start podman.socket && systemctl --user enable podman.socket`
+    - Rootful: `sudo systemctl start podman.socket`
+    - Wait 5s, re-check with `docker info`.
+  - Otherwise → start Docker: `open -a Docker` (macOS) or `sudo systemctl start docker` (Linux). Wait 15s, re-check with `docker info`.
+- DOCKER=not_found → Use `AskUserQuestion: A container runtime is required. Which would you like to use?` with options:
+  1. **Docker (recommended)** — works on macOS, Linux, and Windows (WSL2)
+  2. **Podman** — daemonless, rootless-friendly
+
+  If Docker:
   - macOS: install via `brew install --cask docker`, then `open -a Docker` and wait for it to start. If brew not available, direct to Docker Desktop download at https://docker.com/products/docker-desktop
   - Linux: install with `curl -fsSL https://get.docker.com | sh && sudo usermod -aG docker $USER`. Note: user may need to log out/in for group membership.
+
+  If Podman: run `/convert-to-podman` now, then continue to 3b.
 
 ### 3b. Apple Container conversion gate (if needed)
 

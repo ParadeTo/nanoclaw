@@ -27,11 +27,23 @@ export async function run(_args: string[]): Promise<void> {
     appleContainer = 'installed';
   }
 
-  // Check Docker
+  // Check Docker (or podman-docker)
   let docker: 'running' | 'installed_not_running' | 'not_found' = 'not_found';
+  let podmanDocker = false;
   if (commandExists('docker')) {
+    const { execSync } = await import('child_process');
     try {
-      const { execSync } = await import('child_process');
+      const version = execSync('docker --version', {
+        stdio: ['ignore', 'pipe', 'ignore'],
+        encoding: 'utf-8',
+      });
+      if (version.toLowerCase().includes('podman')) {
+        podmanDocker = true;
+      }
+    } catch {
+      // ignore version check failure
+    }
+    try {
       execSync('docker info', { stdio: 'ignore' });
       docker = 'running';
     } catch {
@@ -85,6 +97,7 @@ export async function run(_args: string[]): Promise<void> {
     IS_HEADLESS: headless,
     APPLE_CONTAINER: appleContainer,
     DOCKER: docker,
+    PODMAN_DOCKER: podmanDocker,
     HAS_ENV: hasEnv,
     HAS_AUTH: hasAuth,
     HAS_REGISTERED_GROUPS: hasRegisteredGroups,

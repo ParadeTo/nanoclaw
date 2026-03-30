@@ -26,6 +26,7 @@ import {
   stopContainer,
 } from './container-runtime.js';
 import { detectAuthMode } from './credential-proxy.js';
+import { readEnvFile } from './env.js';
 import { validateAdditionalMounts } from './mount-security.js';
 import { RegisteredGroup } from './types.js';
 
@@ -236,6 +237,14 @@ function buildContainerArgs(
     '-e',
     `ANTHROPIC_BASE_URL=http://${CONTAINER_HOST_GATEWAY}:${CREDENTIAL_PROXY_PORT}`,
   );
+
+  // Pass model override if configured (for custom endpoints that don't support default model)
+  const envModel =
+    process.env.ANTHROPIC_MODEL ??
+    readEnvFile(['ANTHROPIC_MODEL']).ANTHROPIC_MODEL;
+  if (envModel) {
+    args.push('-e', `ANTHROPIC_MODEL=${envModel}`);
+  }
 
   // Mirror the host's auth method with a placeholder value.
   // API key mode: SDK sends x-api-key, proxy replaces with real key.
