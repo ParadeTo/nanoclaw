@@ -46,7 +46,10 @@ import {
   storeMessage,
 } from './db.js';
 import { GroupQueue } from './group-queue.js';
-import { resolveGroupFolderPath } from './group-folder.js';
+import {
+  resolveGroupFolderPath,
+  isValidGroupFolder,
+} from './group-folder.js';
 import { startIpcWatcher } from './ipc.js';
 import { findChannel, formatMessages, formatOutbound } from './router.js';
 import {
@@ -626,6 +629,27 @@ async function main(): Promise<void> {
       isGroup?: boolean,
     ) => storeChatMetadata(chatJid, timestamp, name, channel, isGroup),
     registeredGroups: () => registeredGroups,
+    assistantName: ASSISTANT_NAME,
+    autoRegisterGroup: (jid: string, name: string) => {
+      if (registeredGroups[jid]) return;
+      // Derive a folder name from the JID: feishu:oc_7144f103... → feishu_7144f103
+      const idPart = jid.replace(/^[^:]+:[a-z]+_/, '').slice(0, 8);
+      const channelPrefix = jid.split(':')[0];
+      const folder = `${channelPrefix}_${idPart}`;
+      if (!isValidGroupFolder(folder)) {
+        logger.warn({ jid, folder }, 'Auto-register: derived folder name is invalid, skipping');
+        return;
+      }
+      registerGroup(jid, {
+        name: name || jid,
+        folder,
+        trigger: DEFAULT_TRIGGER,
+        added_at: new Date().toISOString(),
+        requiresTrigger: true,
+        isMain: false,
+      });
+      logger.info({ jid, folder }, 'Auto-registered group on first bot mention');
+    },
   };
 
   // Create and connect all registered channels.

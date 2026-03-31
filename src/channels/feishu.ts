@@ -32,6 +32,7 @@ class FeishuChannel implements Channel {
   private wsClient: lark.WSClient;
   private connected = false;
   private nameCache = new Map<string, string>(); // open_id → display name
+  private botOpenId = ''; // bot's own open_id, fetched on connect
 
   constructor(
     private opts: ChannelOpts,
@@ -44,6 +45,25 @@ class FeishuChannel implements Channel {
   }
 
   async connect(): Promise<void> {
+    // Fetch bot's own open_id so we can detect when it's @mentioned.
+    // Falls back to FEISHU_BOT_OPEN_ID env var if the API call fails.
+    this.botOpenId = process.env.FEISHU_BOT_OPEN_ID ?? '';
+    if (!this.botOpenId) {
+      try {
+        const res = await this.client.request({
+          method: 'GET',
+          url: '/open-apis/bot/v3/info',
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        this.botOpenId = (res as any)?.bot?.open_id ?? '';
+        if (this.botOpenId) {
+          logger.info({ botOpenId: this.botOpenId }, 'Feishu: fetched bot open_id');
+        }
+      } catch (err) {
+        logger.warn({ err }, 'Feishu: failed to fetch bot open_id, mention detection disabled');
+      }
+    }
+
     const dispatcher = new lark.EventDispatcher({}).register({
       'im.message.receive_v1': async (data) => {
         await this.handleIncomingMessage(data).catch((err) =>
@@ -81,6 +101,7 @@ class FeishuChannel implements Channel {
       message_type?: string;
       content?: string;
       create_time?: string;
+      mentions?: Array<{ key: string; id?: { open_id?: string }; name?: string }>;
     };
     sender?: { sender_id?: { open_id?: string } };
   }): Promise<void> {
@@ -110,7 +131,26 @@ class FeishuChannel implements Channel {
 
     if (!content.trim()) return;
 
+    // Detect if the bot was @mentioned via Feishu's native mention data.
+    // If so, normalize the mention key (e.g. "@_user_1") to "@AssistantName"
+    // so trigger detection works regardless of how the user typed the mention.
+    const assistantName = this.opts.assistantName ?? 'Andy';
+    const botMention = this.botOpenId
+      ? msg.mentions?.find((m) => m.id?.open_id === this.botOpenId)
+      : undefined;
+    if (botMention) {
+      content = content.replace(botMention.key, `@${assistantName}`).trim();
+    }
+
     this.opts.onChatMetadata(jid, timestamp, undefined, 'feishu', isGroup);
+
+    // Auto-register unregistered groups when bot is first @mentioned
+    if (botMention && this.opts.autoRegisterGroup) {
+      const groups = this.opts.registeredGroups();
+      if (!groups[jid]) {
+        this.opts.autoRegisterGroup(jid, jid, isGroup);
+      }
+    }
 
     const newMsg: NewMessage = {
       id: msg.message_id ?? '',
