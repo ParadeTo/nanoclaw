@@ -678,7 +678,10 @@ async function main(): Promise<void> {
 
   // Wire up sibling channels so webhook can forward responses via a real channel
   for (const ch of channels) {
-    if ('setSiblingChannels' in ch && typeof ch.setSiblingChannels === 'function') {
+    if (
+      'setSiblingChannels' in ch &&
+      typeof ch.setSiblingChannels === 'function'
+    ) {
       (ch as any).setSiblingChannels(channels);
     }
   }

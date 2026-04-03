@@ -2,7 +2,12 @@ import http from 'http';
 
 import { readEnvFile } from '../env.js';
 import { logger } from '../logger.js';
-import { Channel, OnChatMetadata, OnInboundMessage, RegisteredGroup } from '../types.js';
+import {
+  Channel,
+  OnChatMetadata,
+  OnInboundMessage,
+  RegisteredGroup,
+} from '../types.js';
 import { ChannelOpts, registerChannel } from './registry.js';
 
 const DEFAULT_PORT = 3200;
@@ -59,9 +64,10 @@ export class WebhookChannel implements Channel {
             const msgId = `wh-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
             const senderName: string = data.sender || 'webhook';
             // Pass raw JSON as message content — business logic lives in CLAUDE.md
-            const content: string = typeof data.message === 'string'
-              ? data.message
-              : JSON.stringify(data);
+            const content: string =
+              typeof data.message === 'string'
+                ? data.message
+                : JSON.stringify(data);
 
             this.onChatMetadata(jid, timestamp, 'Webhook', 'webhook', false);
             this.onMessage(jid, {
@@ -74,7 +80,10 @@ export class WebhookChannel implements Channel {
               is_from_me: false,
             });
 
-            logger.info({ sender: senderName, length: content.length }, 'Webhook message received');
+            logger.info(
+              { sender: senderName, length: content.length },
+              'Webhook message received',
+            );
             res.writeHead(202, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ status: 'accepted', id: msgId }));
           } catch {
@@ -102,12 +111,19 @@ export class WebhookChannel implements Channel {
 
   async sendMessage(_jid: string, text: string): Promise<void> {
     if (!this.linkedJid) {
-      logger.warn('Webhook: WEBHOOK_LINKED_JID not set, cannot forward response');
+      logger.warn(
+        'Webhook: WEBHOOK_LINKED_JID not set, cannot forward response',
+      );
       return;
     }
-    const target = this.siblingChannels.find((ch) => ch.ownsJid(this.linkedJid));
+    const target = this.siblingChannels.find((ch) =>
+      ch.ownsJid(this.linkedJid),
+    );
     if (!target) {
-      logger.warn({ linkedJid: this.linkedJid }, 'Webhook: no channel owns linked JID');
+      logger.warn(
+        { linkedJid: this.linkedJid },
+        'Webhook: no channel owns linked JID',
+      );
       return;
     }
     await target.sendMessage(this.linkedJid, text);
@@ -132,7 +148,8 @@ export class WebhookChannel implements Channel {
 
 registerChannel('webhook', (opts: ChannelOpts) => {
   const envVars = readEnvFile(['WEBHOOK_PORT', 'WEBHOOK_LINKED_JID']);
-  const linkedJid = process.env.WEBHOOK_LINKED_JID || envVars.WEBHOOK_LINKED_JID || '';
+  const linkedJid =
+    process.env.WEBHOOK_LINKED_JID || envVars.WEBHOOK_LINKED_JID || '';
   if (!linkedJid) {
     logger.warn('Webhook: WEBHOOK_LINKED_JID not set — skipping');
     return null;
@@ -141,5 +158,10 @@ registerChannel('webhook', (opts: ChannelOpts) => {
     process.env.WEBHOOK_PORT || envVars.WEBHOOK_PORT || String(DEFAULT_PORT),
     10,
   );
-  return new WebhookChannel(port, linkedJid, opts.onMessage, opts.onChatMetadata);
+  return new WebhookChannel(
+    port,
+    linkedJid,
+    opts.onMessage,
+    opts.onChatMetadata,
+  );
 });
