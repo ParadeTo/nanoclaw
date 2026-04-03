@@ -57,10 +57,16 @@ class FeishuChannel implements Channel {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         this.botOpenId = (res as any)?.bot?.open_id ?? '';
         if (this.botOpenId) {
-          logger.info({ botOpenId: this.botOpenId }, 'Feishu: fetched bot open_id');
+          logger.info(
+            { botOpenId: this.botOpenId },
+            'Feishu: fetched bot open_id',
+          );
         }
       } catch (err) {
-        logger.warn({ err }, 'Feishu: failed to fetch bot open_id, mention detection disabled');
+        logger.warn(
+          { err },
+          'Feishu: failed to fetch bot open_id, mention detection disabled',
+        );
       }
     }
 
@@ -101,7 +107,11 @@ class FeishuChannel implements Channel {
       message_type?: string;
       content?: string;
       create_time?: string;
-      mentions?: Array<{ key: string; id?: { open_id?: string }; name?: string }>;
+      mentions?: Array<{
+        key: string;
+        id?: { open_id?: string };
+        name?: string;
+      }>;
     };
     sender?: { sender_id?: { open_id?: string } };
   }): Promise<void> {

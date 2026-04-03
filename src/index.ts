@@ -46,10 +46,7 @@ import {
   storeMessage,
 } from './db.js';
 import { GroupQueue } from './group-queue.js';
-import {
-  resolveGroupFolderPath,
-  isValidGroupFolder,
-} from './group-folder.js';
+import { resolveGroupFolderPath, isValidGroupFolder } from './group-folder.js';
 import { startIpcWatcher } from './ipc.js';
 import { findChannel, formatMessages, formatOutbound } from './router.js';
 import {
@@ -637,7 +634,10 @@ async function main(): Promise<void> {
       const channelPrefix = jid.split(':')[0];
       const folder = `${channelPrefix}_${idPart}`;
       if (!isValidGroupFolder(folder)) {
-        logger.warn({ jid, folder }, 'Auto-register: derived folder name is invalid, skipping');
+        logger.warn(
+          { jid, folder },
+          'Auto-register: derived folder name is invalid, skipping',
+        );
         return;
       }
       registerGroup(jid, {
@@ -648,7 +648,10 @@ async function main(): Promise<void> {
         requiresTrigger: true,
         isMain: false,
       });
-      logger.info({ jid, folder }, 'Auto-registered group on first bot mention');
+      logger.info(
+        { jid, folder },
+        'Auto-registered group on first bot mention',
+      );
     },
   };
 
@@ -671,6 +674,13 @@ async function main(): Promise<void> {
   if (channels.length === 0) {
     logger.fatal('No channels connected');
     process.exit(1);
+  }
+
+  // Wire up sibling channels so webhook can forward responses via a real channel
+  for (const ch of channels) {
+    if ('setSiblingChannels' in ch && typeof ch.setSiblingChannels === 'function') {
+      (ch as any).setSiblingChannels(channels);
+    }
   }
 
   // Start subsystems (independently of connection handler)
